@@ -1,0 +1,217 @@
+---
+title: "52414 - lab 1"
+author: "52414"
+date: "4/4/2020"
+output: html_document
+---
+# *Lab 1: Basic Data Wrangling*  
+<br/><br/>  
+  
+
+**Contents**:  
+
+* Q0) [Submission Instructions](#submission-instructions)  
+* Q1) [Data Preparation and Manipulation](#data-preparation-and-manipulation)      
+* Q2) [Analysis of Daily New Corona Cases and Deaths](#analysis-of-daily-new-corona-cases-and-deaths)    
+* Q3) [Preparing and Analyzing the World Bank Data](#preparing-and-analyzing-the-world-bank-data)
+* Q4) [Joining the Datasets](#joining-the-datasets)  
+* Q5) [Open Question](#open-question)
+
+<br/><br/>
+  
+  
+### Submission Instructions  
+  
+This lab will be submitted in pairs using GitHub (if you don't have a pair, please contact us).  
+Please follow the steps in the  [GitHub-Classroom Lab 1](https://classroom.github.com/g/oSZNtHq4) to create your group's Lab 1 repository.  
+**Important: your team's name must be `FamilyName1_Name1_and_FamilyName2_Name2`**.  
+You can collaborate with your partner using the git environment; You can either make commits straight to master, or create individual branches (recommended). However, once done, be sure to merge your branches to master - you will be graded using the most recent master version - your last push and merge before the deadline.   
+**Please do not open/review other peoples' repositories - we will be notified by GitHub if you do.**
+
+Your final push should include this Rmd file (with your answers) together with the html file that is outputted automatically by knitr when you knit the Rmd. Anything else will be disregarded. In addition, please adhere to the following file format:    
+`Lab_2_FamilyName1_Name1_and_FamilyName2_Name2.Rmd/html`      
+
+
+<br/><br/>
+  
+The only allowed libraries are the following (**please do not add your own**):
+```{r, include=FALSE}
+library('tidyverse')
+library(data.table)
+```  
+<br/><br/>
+
+## A Deeper Dive Into John's Hopkins Corona Database         
+    
+The John's Hopkins Novel Corona Virus (COVID-19) epidemiological data is compiled by the Johns Hopkins University Center for Systems Science and Engineering (JHU CCSE) from various sources. <br>
+The dataset contains data since 22nd of January 2020. For the data and more information about it, please visit [here](https://data.humdata.org/dataset/novel-coronavirus-2019-ncov-cases).    
+  
+In this lab you will pick up where we left in lecture 2 and analyze the Corona cases and deaths data.  
+
+### Q1
+### Data Preparation and Manipulation   
+(25 points)  
+
+1. We first prepare and aggregate the data.   
+
+a. First, load the `Corona Confirmed Cases Narrow`, the `Corona Confirmed Deaths Narrow`, and the `Corona Confirmed Recovered Narrow` datasets directly from the John's Hopkins website.  
+The type of the `Date` variable should be date type. (2 pts)      
+b. Create new data-frames named `cases.agg`, `deaths.agg`, and `recovered.agg` which aggregate the `sum` of Corona cases, deaths, and recovered respectively over the different countries' provinces. To do this, aggregate `Value` using only the country and date features, ignoring all other features (similarly to what has been shown in `lecture 2`).  
+To achieve the aggregation use the `aggregate` function. In addition, order the data-frame first by Country and then by Date (increasing order). The columns of each of the two resulting data-frames should be `Country.Region, Date, Value`. (5pts)   
+c. Repeat (b) using `tidyverse` and the pipe. Show that the outputs from the two methods are the same. (5pts)  
+d. Using the last day of March as a reference, create a single stacked bar-plot that visualizes the top 10 countries in terms of their Corona cases, and their respected Corona deaths and recovered cases stacked on top of the current sick people in three different colors (each stack should add up to total cases). Make sure that the first bar shows the number of confirmed Corona sick people (`sick = cases - deaths - recovered`). What is the biggest issue with the information presented in this plot? (13pts)
+
+   
+  
+**Solution:**
+```{r}
+conf.cases.nar <- read.csv(url("https://data.humdata.org/hxlproxy/data/download/time_series_covid19_confirmed_global_narrow.csv?dest=data_edit&filter01=explode&explode-header-att01=date&explode-value-att01=value&filter02=rename&rename-oldtag02=%23affected%2Bdate&rename-newtag02=%23date&rename-header02=Date&filter03=rename&rename-oldtag03=%23affected%2Bvalue&rename-newtag03=%23affected%2Binfected%2Bvalue%2Bnum&rename-header03=Value&filter04=clean&clean-date-tags04=%23date&filter05=sort&sort-tags05=%23date&sort-reverse05=on&filter06=sort&sort-tags06=%23country%2Bname%2C%23adm1%2Bname&tagger-match-all=on&tagger-default-tag=%23affected%2Blabel&tagger-01-header=province%2Fstate&tagger-01-tag=%23adm1%2Bname&tagger-02-header=country%2Fregion&tagger-02-tag=%23country%2Bname&tagger-03-header=lat&tagger-03-tag=%23geo%2Blat&tagger-04-header=long&tagger-04-tag=%23geo%2Blon&header-row=1&url=https%3A%2F%2Fraw.githubusercontent.com%2FCSSEGISandData%2FCOVID-19%2Fmaster%2Fcsse_covid_19_data%2Fcsse_covid_19_time_series%2Ftime_series_covid19_confirmed_global.csv"), comment.char="#")
+
+death.cases.nar <- read.csv(url("https://data.humdata.org/hxlproxy/data/download/time_series_covid19_deaths_global_narrow.csv?dest=data_edit&filter01=merge&merge-url01=https%3A%2F%2Fdocs.google.com%2Fspreadsheets%2Fd%2Fe%2F2PACX-1vTglKQRXpkKSErDiWG6ycqEth32MY0reMuVGhaslImLjfuLU0EUgyyu2e-3vKDArjqGX7dXEBV8FJ4f%2Fpub%3Fgid%3D1326629740%26single%3Dtrue%26output%3Dcsv&merge-keys01=%23country%2Bname&merge-tags01=%23country%2Bcode%2C%23region%2Bmain%2Bcode%2C%23region%2Bsub%2Bcode%2C%23region%2Bintermediate%2Bcode&filter02=merge&merge-url02=https%3A%2F%2Fdocs.google.com%2Fspreadsheets%2Fd%2Fe%2F2PACX-1vTglKQRXpkKSErDiWG6ycqEth32MY0reMuVGhaslImLjfuLU0EUgyyu2e-3vKDArjqGX7dXEBV8FJ4f%2Fpub%3Fgid%3D398158223%26single%3Dtrue%26output%3Dcsv&merge-keys02=%23adm1%2Bname&merge-tags02=%23country%2Bcode%2C%23region%2Bmain%2Bcode%2C%23region%2Bsub%2Bcode%2C%23region%2Bintermediate%2Bcode&merge-replace02=on&merge-overwrite02=on&filter03=explode&explode-header-att03=date&explode-value-att03=value&filter04=rename&rename-oldtag04=%23affected%2Bdate&rename-newtag04=%23date&rename-header04=Date&filter05=rename&rename-oldtag05=%23affected%2Bvalue&rename-newtag05=%23affected%2Binfected%2Bvalue%2Bnum&rename-header05=Value&filter06=clean&clean-date-tags06=%23date&filter07=sort&sort-tags07=%23date&sort-reverse07=on&filter08=sort&sort-tags08=%23country%2Bname%2C%23adm1%2Bname&tagger-match-all=on&tagger-default-tag=%23affected%2Blabel&tagger-01-header=province%2Fstate&tagger-01-tag=%23adm1%2Bname&tagger-02-header=country%2Fregion&tagger-02-tag=%23country%2Bname&tagger-03-header=lat&tagger-03-tag=%23geo%2Blat&tagger-04-header=long&tagger-04-tag=%23geo%2Blon&header-row=1&url=https%3A%2F%2Fraw.githubusercontent.com%2FCSSEGISandData%2FCOVID-19%2Fmaster%2Fcsse_covid_19_data%2Fcsse_covid_19_time_series%2Ftime_series_covid19_deaths_global.csv"), comment.char="#")
+
+recovered.cases.nar <- read.csv(url("https://data.humdata.org/hxlproxy/data/download/time_series_covid19_recovered_global_narrow.csv?dest=data_edit&filter01=merge&merge-url01=https%3A%2F%2Fdocs.google.com%2Fspreadsheets%2Fd%2Fe%2F2PACX-1vTglKQRXpkKSErDiWG6ycqEth32MY0reMuVGhaslImLjfuLU0EUgyyu2e-3vKDArjqGX7dXEBV8FJ4f%2Fpub%3Fgid%3D1326629740%26single%3Dtrue%26output%3Dcsv&merge-keys01=%23country%2Bname&merge-tags01=%23country%2Bcode%2C%23region%2Bmain%2Bcode%2C%23region%2Bsub%2Bcode%2C%23region%2Bintermediate%2Bcode&filter02=merge&merge-url02=https%3A%2F%2Fdocs.google.com%2Fspreadsheets%2Fd%2Fe%2F2PACX-1vTglKQRXpkKSErDiWG6ycqEth32MY0reMuVGhaslImLjfuLU0EUgyyu2e-3vKDArjqGX7dXEBV8FJ4f%2Fpub%3Fgid%3D398158223%26single%3Dtrue%26output%3Dcsv&merge-keys02=%23adm1%2Bname&merge-tags02=%23country%2Bcode%2C%23region%2Bmain%2Bcode%2C%23region%2Bsub%2Bcode%2C%23region%2Bintermediate%2Bcode&merge-replace02=on&merge-overwrite02=on&filter03=explode&explode-header-att03=date&explode-value-att03=value&filter04=rename&rename-oldtag04=%23affected%2Bdate&rename-newtag04=%23date&rename-header04=Date&filter05=rename&rename-oldtag05=%23affected%2Bvalue&rename-newtag05=%23affected%2Binfected%2Bvalue%2Bnum&rename-header05=Value&filter06=clean&clean-date-tags06=%23date&filter07=sort&sort-tags07=%23date&sort-reverse07=on&filter08=sort&sort-tags08=%23country%2Bname%2C%23adm1%2Bname&tagger-match-all=on&tagger-default-tag=%23affected%2Blabel&tagger-01-header=province%2Fstate&tagger-01-tag=%23adm1%2Bname&tagger-02-header=country%2Fregion&tagger-02-tag=%23country%2Bname&tagger-03-header=lat&tagger-03-tag=%23geo%2Blat&tagger-04-header=long&tagger-04-tag=%23geo%2Blon&header-row=1&url=https%3A%2F%2Fraw.githubusercontent.com%2FCSSEGISandData%2FCOVID-19%2Fmaster%2Fcsse_covid_19_data%2Fcsse_covid_19_time_series%2Ftime_series_covid19_recovered_global.csv"),comment.char="#")
+
+ 
+cases.agg <- aggregate(Value ~ Country.Region + Date, data = conf.cases.nar, FUN = sum)
+cases.agg.country <- cases.agg[order(cases.agg$Country.Region),]
+#cases.agg.country
+cases.agg.date <- cases.agg[order(cases.agg$Date),]
+#cases.agg.date
+
+deaths.agg <- aggregate(Value ~ Country.Region + Date, data = death.cases.nar, FUN = sum)
+deaths.agg.country <- deaths.agg[order(deaths.agg$Country.Region),]
+#deaths.agg.country
+deaths.agg.date <- deaths.agg[order(deaths.agg$Date),]
+#deaths.agg.date
+
+recovered.agg <- aggregate(Value ~ Country.Region + Date, data = recovered.cases.nar, FUN = sum)
+recovered.agg.country <- recovered.agg[order(recovered.agg$Country.Region),]
+#recovered.agg.country
+recovered.agg.date <- recovered.agg[order(recovered.agg$Date),]
+#recovered.agg.date
+
+
+```  
+D:
+```{r}
+sum_cases <- aggregate(Value ~ Country.Region + Date, data = conf.cases.nar, FUN = sum)
+cases_march <- sum_cases[which(sum_cases$Date=="2020-03-31"),c('Country.Region','Value')]
+cases_march <- cases_march[order(-cases_march$Value),][1:10,]
+#cases_march
+
+sum_deaths <- aggregate(Value ~ Country.Region + Date, data = death.cases.nar, FUN = sum)
+deaths_march <- sum_deaths[which(sum_deaths$Date=="2020-03-31"),c('Country.Region','Value')]
+deaths_march <- deaths_march[order(-deaths_march$Value),][1:10,]
+#deaths_march
+
+sum_recovered <- aggregate(Value ~ Country.Region + Date, data = recovered.cases.nar, FUN = sum)
+recovered_march <- sum_recovered[which(sum_recovered$Date=="2020-03-31"),c('Country.Region','Value')]
+recovered_march <- recovered_march[order(-recovered_march$Value),][1:10,]
+#recovered_march
+
+barplot_cases <- barplot(height=cases_march$Value, names=cases_march$Country.Region, main="MARCH TOP 10",xlab="", ylab= "numbers of cases", col = "darkred", ylim = c(0,190000),las = 2,cex.names = 1)
+#barplot_cases
+
+barplot_deaths <- barplot(height=deaths_march$Value, names=deaths_march$Country.Region, main="MARCH TOP 10",xlab="", ylab= "numbers of deaths", col = "green", ylim = c(0,15000),las = 2,cex.names = 1)
+#barplot_deaths
+
+barplot_recovered <- barplot(height=recovered_march$Value, names=recovered_march$Country.Region, main="MARCH TOP 10",xlab="", ylab= "numbers of recovered", col = "yellow", ylim = c(0,80000),las = 2,cex.names = 1)
+#barplot_recovered
+
+
+colors = c("green","orange","brown")
+countries <- c('US', 'Italy', 'Spain', 'China', 'Germany','France','Iran', 'United Kingdom', 'Switzerland', 'Turkey')
+regions <- c("deaths", "recoverd","sick")
+
+Values <- matrix(c(3873,12428,8464,3309,775,3532,2898,1793,0,0,7024,15729,19259,76206,16100,9513,14656,0,1823,0,188172,105792,95923,82279,71808,52827,44605,25481,16605,13531), nrow = 3, ncol = 10, byrow = TRUE)
+
+bar <- barplot(Values, main = "Top ten countries", names.arg = countries, xlab = "", ylab = "value", col = colors, ylim = c(0,190000),las = 2,cex.names = 1)
+legend("topright", regions, cex = 0.5, fill = colors)
+bar
+
+```
+
+### Q2
+### Analysis of Daily New Corona Cases and Deaths  
+20 points
+
+The two datasets (Corona Cases and Deaths) register the value of cases and deaths, respectively, as a cumulative sum for each day. In this question we would like to understand the daily differences between consecutive days.     
+
+a. Add a new column named `Diff` to both the `cases.agg` and the `deaths.agg` data-frames. This new column should register the daily `Value` difference for each country. In other words, the `Diff` column shows how many new cases/deaths each country incurs every day. Hint - diff must be per country. (7pts)  
+b. Find the top 10 instances of country and date combinations with the greatest absolute number of new daily Corona cases and deaths (separately). Print the result in a descriptive format. (5pts)  
+c. In one figure, plot Italy's new daily Corona cases AND deaths as a function of Date. Choose the plot type you think that makes the most sense. (3pts) 
+d. Plot the same graph as in (c), but this time plot the number of new cases on the logarithm scale. What can we learn? (5pts)  
+
+  
+**Solution:**    
+
+YOUR SOLUTION HERE.
+Use code blocks and markdown to clearly communicate your work.
+
+<br/><br/>
+
+
+### Q3
+### Preparing and Analyzing the World Bank Data   
+25 points
+
+a. Rename the columns of `eco_data`: `country,S_country,feature,feature_code,Y2018V,Y2019V`. (2pts)  
+b. Create a new `eco` data-frame whose dimensions are $266 \times 11$. The first column should include the names of the countries in `eco_data.`   
+The rest of the columns should be the features with their respective values in `eco_data` for each country from 2018. Print the head of the new data-frame.(8pts)  
+c. Select and rename the following columns: `country` as country, `GDP(US currency)` as GDP, `Population ages 65 and above (% of total population)` as pop65, `Population in the largest city (% of urban population)` as pop_city_ratio, `Population, total` as pop_total columns .  (2pts) 
+d. Show a table of the five countries with the highest per capita GDP in 2018.     
+Next (considering all countries), plot the % of population over 65 vs. log of GDP per capita in 2018, after excluding the 10% countries with the lowest GDP per capita. Using `lm` and `abline`, add a regression line to the plot. What is your conclusion? (13 pts)  
+  
+  
+  
+**Solution:** 
+
+```{r}
+#loading the `eco_data`:
+eco_data <- read.csv(url("https://raw.githubusercontent.com/DataScienceHU/DataAnalysisR_2020/master/data/economic_data.csv"))
+
+```
+
+YOUR SOLUTION HERE.
+Use code blocks and markdown to clearly communicate your work.
+
+<br/><br/>  
+
+
+### Q4
+### Joining the Datasets   
+20 points
+
+a. Join the `deaths.agg`, `cases.agg`, and `recovered.agg` into one data-frame called `corona`.(5pts)
+b. Join the `corona` and `eco` data-frames in a way that will keep the most information regarding the data (but not full join).   
+Make sure that no essential data is thrown away (show this). (3pts)
+c. Create new columns of normalized `cases`, `deaths`, and `recovered` so they will show the number of cases per 100,000 people for each country.   
+Using the last day of March as a reference, create a single stacked bar plot that visualizes the top 10 countries in terms of normalized Corona cases, and their respected normalized Corona deaths and recovered, as done in Q1.   
+how is it different from the graph before normalization? (5pts)
+d. Using the last day of March as a reference, create a scatter-plot of normalized deaths and cases vs. `pop65`. Limit the plot to show only countries with 15% or more of `pop65`.   
+In addition, color the outliers( pop65>24, norm100K_deaths>15) in that plot in red and add to the plot their country names (7pts)
+  
+  
+**Solution:**   
+
+YOUR SOLUTION HERE.
+Use code blocks and markdown to clearly communicate your work.
+
+<br/><br/>  
+
+
+
+### Q5
+### Open Question
+10 points
+  
+Write an interesting research question regarding the Corona outbreak and then follow the steps to answer it using tables and plots. You can use the loaded datasets or any other dataset you find as long as you add the data file to your `lab1` repository so it can be loaded directly from a `url` (e.g. the World Bank). This question will be graded based on creativity, originality, and the novelty of the analysis.   
+  
+**Solution:**   
+
+YOUR SOLUTION HERE.
+Use code blocks and markdown to clearly communicate your work.
+
+<br/><br/>  
+```{r}
+```
